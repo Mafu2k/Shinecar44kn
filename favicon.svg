@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#dc143c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff1744;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100" height="100" rx="15" fill="#0a0a0a"/>
+
+  <!-- Car silhouette -->
+  <path d="M 20 50 L 30 35 L 45 35 L 50 30 L 60 30 L 65 35 L 80 35 L 90 50 L 85 55 L 80 50 L 75 55 C 75 60 72 63 67 63 C 62 63 59 60 59 55 L 41 55 C 41 60 38 63 33 63 C 28 63 25 60 25 55 L 20 50 Z" fill="url(#grad)"/>
+
+  <!-- Wheel 1 -->
+  <circle cx="33" cy="55" r="5" fill="#0a0a0a"/>
+  <circle cx="33" cy="55" r="3" fill="url(#grad)"/>
+
+  <!-- Wheel 2 -->
+  <circle cx="67" cy="55" r="5" fill="#0a0a0a"/>
+  <circle cx="67" cy="55" r="3" fill="url(#grad)"/>
+
+  <!-- Window -->
+  <path d="M 35 40 L 42 35 L 58 35 L 65 40 Z" fill="#ffffff" opacity="0.3"/>
+
+  <!-- Shine effect -->
+  <circle cx="50" cy="40" r="3" fill="#ffffff" opacity="0.6"/>
+  <circle cx="45" cy="42" r="2" fill="#ffffff" opacity="0.4"/>
+</svg>

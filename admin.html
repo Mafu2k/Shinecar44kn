@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admina - Shine Car Detailing</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="fontawesome/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .login-box {
+            max-width: 450px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 10px 40px rgba(220, 20, 60, 0.3);
+        }
+
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #dc143c;
+            font-weight: 800;
+        }
+
+        .admin-panel {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #dc143c;
+        }
+
+        .admin-header h1 {
+            color: #dc143c;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .btn-logout {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .promotions-manager {
+            margin-top: 2rem;
+        }
+
+        .add-promotion-btn {
+            background: linear-gradient(135deg, #dc143c 0%, #ff1744 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(220, 20, 60, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .add-promotion-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(220, 20, 60, 0.5);
+        }
+
+        .promotion-form {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .promotion-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #dc143c;
+        }
+
+        .upload-area {
+            border: 3px dashed #dc143c;
+            border-radius: 15px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .upload-area:hover {
+            background: #fff5f5;
+            border-color: #ff1744;
+        }
+
+        .upload-area.dragover {
+            background: #fff5f5;
+            border-color: #ff1744;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #dc143c;
+            margin-bottom: 1rem;
+        }
+
+        .image-preview {
+            margin-top: 1rem;
+            max-width: 100%;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .existing-promotions {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .admin-promotion-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .admin-promotion-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%);
+        }
+
+        .admin-promotion-content {
+            padding: 1.5rem;
+        }
+
+        .admin-promotion-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-delete {
+            flex: 1;
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.6rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .btn-edit {
+            flex: 1;
+            background: #ffc107;
+            color: white;
+            border: none;
+            padding: 0.6rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit:hover {
+            background: #e0a800;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div id="loginBox" class="login-box">
+            <h2><i class="fas fa-lock"></i> Panel Admina</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Nazwa użytkownika</label>
+                    <input type="text" class="form-control" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Hasło</label>
+                    <input type="password" class="form-control" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; margin-top: 1rem;">
+                    Zaloguj się
+                </button>
+            </form>
+            <p style="margin-top: 1rem; text-align: center; color: #6c757d; font-size: 0.9rem;">
+                Domyślne dane: admin / admin123
+            </p>
+        </div>
+
+        <div id="adminPanel" class="admin-panel">
+            <div class="admin-header">
+                <h1><i class="fas fa-cogs"></i> Panel Zarządzania Promocjami</h1>
+                <button class="btn-logout" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Wyloguj
+                </button>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="promotions-manager">
+                <button class="add-promotion-btn" onclick="togglePromotionForm()">
+                    <i class="fas fa-plus"></i> Dodaj Nową Promocję
+                </button>
+
+                <div id="promotionForm" class="promotion-form">
+                    <h3 style="margin-bottom: 1.5rem; color: #dc143c;">
+                        <i class="fas fa-tag"></i> Nowa Promocja
+                    </h3>
+                    <form id="addPromotionForm">
+                        <div class="form-group">
+                            <label for="promoTitle">Tytuł promocji *</label>
+                            <input type="text" class="form-control" id="promoTitle" required
+                                   placeholder="np. Pakiet Startowy -30%">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="promoDescription">Opis promocji *</label>
+                            <textarea class="form-control" id="promoDescription" rows="3" required
+                                      placeholder="Krótki opis promocji..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="promoOldPrice">Cena przed promocją (zł)</label>
+                                    <input type="number" class="form-control" id="promoOldPrice"
+                                           placeholder="np. 500">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="promoNewPrice">Cena promocyjna (zł) *</label>
+                                    <input type="number" class="form-control" id="promoNewPrice" required
+                                           placeholder="np. 350">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="promoBadge">Etykieta</label>
+                                    <input type="text" class="form-control" id="promoBadge"
+                                           placeholder="np. -30%">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Grafika promocji *</label>
+                            <div class="upload-area" id="uploadArea">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <p><strong>Przeciągnij i upuść</strong> grafikę tutaj</p>
+                                <p style="color: #6c757d; font-size: 0.9rem;">lub kliknij, aby wybrać plik</p>
+                                <p style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">
+                                    Zalecany rozmiar: 800x500px (JPG, PNG)
+                                </p>
+                                <input type="file" id="promoImage" accept="image/*" style="display: none;" required>
+                            </div>
+                            <div class="image-preview" id="imagePreview">
+                                <img id="previewImg" src="" alt="Preview">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                                <i class="fas fa-save"></i> Zapisz Promocję
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="togglePromotionForm()"
+                                    style="flex: 1; background: #6c757d;">
+                                <i class="fas fa-times"></i> Anuluj
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <h3 style="margin-top: 3rem; margin-bottom: 1.5rem; color: #1a1a1a;">
+                    <i class="fas fa-list"></i> Istniejące Promocje
+                </h3>
+                <div id="existingPromotions" class="existing-promotions">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
