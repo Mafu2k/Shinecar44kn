@@ -1,7 +1,5 @@
-
 (function () {
     'use strict';
-
 
     const navbar = document.getElementById('mainNav');
 
@@ -12,7 +10,6 @@
             navbar.classList.remove('scrolled');
         }
     });
-
 
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -27,7 +24,7 @@
                 });
 
                 const navbarCollapse = document.querySelector('.navbar-collapse');
-                if (navbarCollapse.classList.contains('show')) {
+                if (navbarCollapse && navbarCollapse.classList.contains('show')) {
                     const navbarToggler = document.querySelector('.navbar-toggler');
                     navbarToggler.click();
                 }
@@ -35,463 +32,168 @@
         });
     });
 
-    const statsSection = document.querySelector('.stats-section');
-    let statsAnimated = false;
-
-    function animateStats() {
-        const statNumbers = document.querySelectorAll('.stat-number');
-
-        statNumbers.forEach(stat => {
-            const target = parseInt(stat.getAttribute('data-target'));
-            const duration = 2000;
-            const increment = target / (duration / 16);
-            let current = 0;
-
-            const updateCounter = () => {
-                current += increment;
-                if (current < target) {
-                    stat.textContent = Math.floor(current);
-                    requestAnimationFrame(updateCounter);
-                } else {
-                    stat.textContent = target;
-                }
-            };
-
-            updateCounter();
-        });
-    }
-
-    const observerOptions = {
-        threshold: 0.5
+    const SERVICES = {
+        'svc-odswiezenie':       { name: 'Odświeżenie',            min: 150,  max: 300  },
+        'svc-premium':           { name: 'Premium',                min: 250,  max: 600  },
+        'svc-pranie-podstawowe': { name: 'Pranie podstawowe',      min: 150,  max: 400  },
+        'svc-pranie-pelne':      { name: 'Pranie pełne',           min: 450,  max: 1200 },
+        'svc-czyszczenie-skor':  { name: 'Czyszczenie skór',       min: 150,  max: 550  },
+        'svc-mycie-podstawowe':  { name: 'Mycie podstawowe',       min: 150,  max: 200  },
+        'svc-mycie-premium':     { name: 'Mycie premium',          min: 250,  max: 600  },
+        'svc-dekontaminacja':    { name: 'Dekontaminacja lakieru', min: 350,  max: 800  },
+        'svc-felgi':             { name: 'Felgi +',                min: 100,  max: 250  },
+        'svc-pol-1step':         { name: 'Polerowanie 1-step',     min: 400,  max: 800  },
+        'svc-pol-2step':         { name: 'Polerowanie 2-step',     min: 700,  max: 1300 },
+        'svc-pelna-korekta':     { name: 'Pełna korekta',          min: 900,  max: 2000 },
+        'svc-wosk':              { name: 'Wosk',                   min: 200,  max: 350  },
+        'svc-powloka-15':        { name: 'Powłoka 1,5-roczna',     min: 300,  max: 600  },
+        'svc-powloka-3':         { name: 'Powłoka 3-letnia',       min: 500,  max: 750  },
+        'svc-powloka-5':         { name: 'Powłoka 5-letnia',       min: 600,  max: 900  },
+        'svc-ppf':               { name: 'Folia PPF',               min: 0,    max: 0, individual: true },
     };
 
-    const statsObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting && !statsAnimated) {
-                animateStats();
-                statsAnimated = true;
+    const REQUIRES = {
+        'svc-pranie-podstawowe': ['svc-premium'],
+        'svc-pranie-pelne':      ['svc-premium'],
+        'svc-czyszczenie-skor':  ['svc-premium'],
+        'svc-pol-1step':         ['svc-dekontaminacja'],
+        'svc-pol-2step':         ['svc-dekontaminacja'],
+        'svc-pelna-korekta':     ['svc-dekontaminacja'],
+        'svc-wosk':              ['svc-dekontaminacja'],
+        'svc-powloka-15':        ['svc-dekontaminacja', 'svc-pelna-korekta'],
+        'svc-powloka-3':         ['svc-dekontaminacja', 'svc-pelna-korekta'],
+        'svc-powloka-5':         ['svc-dekontaminacja', 'svc-pelna-korekta'],
+    };
+
+    function isChecked(id) {
+        const el = document.getElementById(id);
+        return el ? el.checked : false;
+    }
+
+    function getWrapperId(svcId) {
+        return 'cb-' + svcId.replace('svc-', '');
+    }
+
+    function updateDependencies() {
+
+        const requiredBy = {};
+        Object.entries(REQUIRES).forEach(([triggerId, deps]) => {
+            if (isChecked(triggerId)) {
+                deps.forEach(depId => {
+                    if (!requiredBy[depId]) requiredBy[depId] = new Set();
+                    requiredBy[depId].add(triggerId);
+                });
             }
         });
-    }, observerOptions);
 
-    if (statsSection) {
-        statsObserver.observe(statsSection);
-    }
+        const allDeps = new Set(Object.values(REQUIRES).flat());
 
+        allDeps.forEach(depId => {
+            const cb = document.getElementById(depId);
+            const wrapper = document.getElementById(getWrapperId(depId));
+            if (!cb || !wrapper) return;
 
-    let selectedVehicleType = null;
-    const selectedServices = new Map();
+            const isRequired = !!(requiredBy[depId] && requiredBy[depId].size > 0);
 
-    function getVehicleSize() {
-        if (selectedVehicleType === 'small') return 'small';
-        if (selectedVehicleType === 'medium') return 'medium';
-        if (selectedVehicleType === 'large') return 'large';
-        return 'small';
-    }
-
-    function getServicePrice(checkbox) {
-        const size = getVehicleSize();
-        return parseInt(checkbox.getAttribute('data-price-' + size)) || 0;
-    }
-
-    function isPranieSelected() {
-        const pranieCheckboxes = document.querySelectorAll('.service-checkbox[data-pranie="true"] input[type="checkbox"]');
-        let anyChecked = false;
-        pranieCheckboxes.forEach(cb => { if (cb.checked) anyChecked = true; });
-        if (anyChecked) return true;
-        const pranieQtyIds = [];
-        document.querySelectorAll('.service-checkbox.service-qty[data-pranie="true"] input[type="hidden"]').forEach(h => {
-            pranieQtyIds.push(h.id);
-        });
-        for (const id of pranieQtyIds) {
-            const svc = selectedServices.get(id);
-            if (svc && svc.qty && svc.qty > 0) return true;
-        }
-        return false;
-    }
-
-    function updateOdswiezenieGratis() {
-        const odswiezenieBox = document.getElementById('odswiezenieBox');
-        if (!odswiezenieBox) return;
-        const cb = odswiezenieBox.querySelector('input[type="checkbox"]');
-        const noteEl = odswiezenieBox.querySelector('.service-note');
-        if (isPranieSelected()) {
-            if (!cb.checked) {
+            if (isRequired) {
                 cb.checked = true;
-                cb.dispatchEvent(new Event('change'));
+                cb.disabled = true;
+                wrapper.classList.add('service-required');
+                wrapper.classList.add('selected');
+
+                let note = wrapper.querySelector('.required-note');
+                if (!note) {
+                    note = document.createElement('small');
+                    note.className = 'required-note';
+                    note.innerHTML = '<i class="fas fa-lock"></i> wymagane';
+                    wrapper.querySelector('label').appendChild(note);
+                }
+            } else {
+                cb.disabled = false;
+                wrapper.classList.remove('service-required');
+                const note = wrapper.querySelector('.required-note');
+                if (note) note.remove();
+                if (!cb.checked) wrapper.classList.remove('selected');
             }
-            if (noteEl) noteEl.style.color = '#28a745';
+        });
+    }
+
+    function updateSummary() {
+        const list = document.getElementById('selectedServices');
+        if (!list) return;
+
+        const checked = Object.keys(SERVICES).filter(id => isChecked(id));
+
+        if (checked.length === 0) {
+            list.innerHTML = '<li class="empty-state">Brak wybranych usług</li>';
         } else {
-            if (noteEl) noteEl.style.color = '';
+            list.innerHTML = checked.map(id => {
+                const svc = SERVICES[id];
+                const cb = document.getElementById(id);
+                const isReq = cb && cb.disabled;
+                const badge = isReq ? ' <small class="req-badge"><i class="fas fa-lock"></i> wymagane</small>' : '';
+                const priceStr = svc.individual ? 'Wycena indyw.' : `${svc.min}–${svc.max} zł`;
+                return `<li>
+                    <span>${svc.name}${badge}</span>
+                    <span class="svc-range">${priceStr}</span>
+                </li>`;
+            }).join('');
         }
     }
 
-    function updateDisplayedPrices() {
-        const size = getVehicleSize();
-        document.querySelectorAll('.service-checkbox input[type="checkbox"]').forEach(cb => {
-            const priceEl = cb.closest('.service-checkbox').querySelector('.service-price');
-            if (!priceEl) return;
-            if (cb.hasAttribute('data-individual')) return;
-            const price = parseInt(cb.getAttribute('data-price-' + size)) || 0;
-            if (price === 0) return;
-            priceEl.textContent = price + ' zł';
-        });
-    }
+    function updatePrice() {
+        const totalEl = document.getElementById('totalPrice');
+        if (!totalEl) return;
 
-    const vehicleTypes = document.querySelectorAll('.vehicle-type');
+        const checked = Object.keys(SERVICES).filter(id => isChecked(id));
 
-    vehicleTypes.forEach(type => {
-        type.addEventListener('click', function () {
-            vehicleTypes.forEach(t => t.classList.remove('selected'));
-            this.classList.add('selected');
-            selectedVehicleType = this.getAttribute('data-type');
-            updateVehicleSummary(this.querySelector('h4').textContent);
-
-            selectedServices.forEach((service, id) => {
-                const checkbox = document.getElementById(id);
-                if (checkbox) {
-                    const unitPrice = getServicePrice(checkbox);
-                    if (service.qty) {
-                        service.unitPrice = unitPrice;
-                        service.price = unitPrice * service.qty;
-                    } else {
-                        service.price = unitPrice;
-                    }
-                }
-            });
-
-            updateDisplayedPrices();
-            updateServicesSummary();
-            updateTotalPrice();
-        });
-    });
-
-    const serviceCheckboxes = document.querySelectorAll('.service-checkbox:not(.service-qty)');
-
-    serviceCheckboxes.forEach(checkboxWrapper => {
-        const checkbox = checkboxWrapper.querySelector('input[type="checkbox"]');
-        if (!checkbox) return;
-        const label = checkboxWrapper.querySelector('label');
-
-        checkboxWrapper.addEventListener('click', function (e) {
-            if (e.target !== checkbox) {
-                e.preventDefault();
-                checkbox.checked = !checkbox.checked;
-                checkbox.dispatchEvent(new Event('change'));
-            }
-        });
-
-        checkbox.addEventListener('change', function () {
-            const serviceId = this.id;
-            const serviceName = label.querySelector('.service-name').textContent;
-            const isIndividual = this.hasAttribute('data-individual');
-            const price = getServicePrice(this);
-
-            if (this.checked) {
-                selectedServices.set(serviceId, {
-                    name: serviceName,
-                    price: price,
-                    individual: isIndividual
-                });
-                checkboxWrapper.style.background = 'rgba(220, 20, 60, 0.1)';
-                checkboxWrapper.style.borderColor = '#dc143c';
-            } else {
-                selectedServices.delete(serviceId);
-                checkboxWrapper.style.background = '';
-                checkboxWrapper.style.borderColor = '';
-            }
-
-            updateOdswiezenieGratis();
-            updateServicesSummary();
-            updateTotalPrice();
-        });
-    });
-
-    document.querySelectorAll('.qty-btn').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            const targetId = this.getAttribute('data-target');
-            const qtyEl = document.getElementById(targetId);
-            if (!qtyEl) return;
-            let qty = parseInt(qtyEl.textContent) || 0;
-
-            if (this.classList.contains('qty-plus')) {
-                qty++;
-            } else if (this.classList.contains('qty-minus') && qty > 0) {
-                qty--;
-            }
-
-            qtyEl.textContent = qty;
-
-            const wrapper = this.closest('.service-checkbox');
-            const hiddenInput = wrapper.querySelector('input[type="hidden"]');
-            if (!hiddenInput) return;
-
-            const serviceId = hiddenInput.id;
-            const nameEl = wrapper.querySelector('.service-name');
-            const serviceName = nameEl ? nameEl.textContent : serviceId;
-            const unitPrice = getServicePrice(hiddenInput);
-
-            if (qty > 0) {
-                selectedServices.set(serviceId, {
-                    name: serviceName,
-                    price: unitPrice * qty,
-                    qty: qty,
-                    unitPrice: unitPrice
-                });
-                wrapper.style.background = 'rgba(220, 20, 60, 0.1)';
-                wrapper.style.borderColor = '#dc143c';
-            } else {
-                selectedServices.delete(serviceId);
-                wrapper.style.background = '';
-                wrapper.style.borderColor = '';
-            }
-
-            updateOdswiezenieGratis();
-            updateServicesSummary();
-            updateTotalPrice();
-        });
-    });
-
-    function scrollToBookingWithServices() {
-        let servicesText = '';
-        let totalPrice = 0;
-        let hasPranie = isPranieSelected();
-
-        selectedServices.forEach((service, id) => {
-            let isOdswiezenie = (id === 'wnetrze1');
-            let isFree = isOdswiezenie && hasPranie;
-
-            if (service.individual) {
-                servicesText += `- ${service.name}: Wycena indywidualna\n`;
-            } else if (isFree) {
-                servicesText += `- ${service.name}: GRATIS\n`;
-            } else if (service.qty) {
-                servicesText += `- ${service.name} ×${service.qty}: ${service.price} zł\n`;
-                totalPrice += service.price;
-            } else {
-                servicesText += `- ${service.name}: ${service.price} zł\n`;
-                totalPrice += service.price;
-            }
-        });
-
-        const messageField = document.getElementById('message');
-        if (messageField) {
-            const vehicleNames = { small: 'Segment A/B (Małe)', medium: 'Segment C/D (Średnie)', large: 'SUV/VAN (Duże)' };
-            const vehicleName = vehicleNames[selectedVehicleType] || 'nie wybrano';
-            messageField.value = `Wycena z kalkulatora:\n\nTyp pojazdu: ${vehicleName}\n\nWybrane usługi:\n${servicesText}\nSzacowana cena: ${totalPrice} zł\n`;
-        }
-
-        const serviceSelect = document.getElementById('service');
-        if (serviceSelect) {
-            serviceSelect.value = 'inne';
-        }
-
-        document.getElementById('booking').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    const nextStepBtn = document.getElementById('nextStep');
-    const prevStepBtn = document.getElementById('prevStep');
-    let currentStep = 1;
-
-    if (nextStepBtn) {
-        nextStepBtn.addEventListener('click', function () {
-            if (currentStep === 1) {
-                if (!selectedVehicleType) {
-                    alert('Proszę wybrać rozmiar pojazdu');
-                    return;
-                }
-                currentStep = 2;
-                showStep(currentStep);
-            } else if (currentStep === 2) {
-                if (selectedServices.size === 0) {
-                    alert('Proszę wybrać przynajmniej jedną usługę');
-                    return;
-                }
-                scrollToBookingWithServices();
-            }
-        });
-    }
-
-    if (prevStepBtn) {
-        prevStepBtn.addEventListener('click', function () {
-            if (currentStep === 2) {
-                currentStep = 1;
-                showStep(currentStep);
-            }
-        });
-    }
-
-    function showStep(step) {
-        document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
-        document.querySelector(`.form-step[data-step="${step}"]`).classList.add('active');
-
-        if (step === 1) {
-            prevStepBtn.style.display = 'none';
-            nextStepBtn.innerHTML = 'Dalej <i class="fas fa-arrow-right"></i>';
-        } else {
-            prevStepBtn.style.display = 'inline-block';
-            nextStepBtn.innerHTML = 'Gotowe <i class="fas fa-check"></i>';
-        }
-    }
-
-    function updateVehicleSummary(vehicleName) {
-        const vehicleSummary = document.getElementById('selectedVehicle');
-        vehicleSummary.textContent = vehicleName;
-    }
-
-    function updateServicesSummary() {
-        const servicesList = document.getElementById('selectedServices');
-        servicesList.innerHTML = '';
-
-        if (selectedServices.size === 0) {
-            servicesList.innerHTML = '<li class="empty-state">Brak wybranych usług</li>';
+        if (checked.length === 0) {
+            totalEl.textContent = '— zł';
             return;
         }
 
-        let hasPranie = isPranieSelected();
-
-        selectedServices.forEach((service, id) => {
-            const li = document.createElement('li');
-            let isOdswiezenie = (id === 'wnetrze1');
-            let isFree = isOdswiezenie && hasPranie;
-
-            if (service.individual) {
-                li.innerHTML = `
-                    <span>${service.name}</span>
-                    <span>Wycena indyw.</span>
-                `;
-            } else if (isFree) {
-                li.innerHTML = `
-                    <span>${service.name} <small style="color:#28a745">(GRATIS)</small></span>
-                    <span><s>150 zł</s> 0 zł</span>
-                `;
-            } else if (service.qty) {
-                li.innerHTML = `
-                    <span>${service.name} ×${service.qty}</span>
-                    <span>${service.price} zł</span>
-                `;
-            } else {
-                li.innerHTML = `
-                    <span>${service.name}</span>
-                    <span>${service.price} zł</span>
-                `;
-            }
-            servicesList.appendChild(li);
-        });
-    }
-
-    function updateTotalPrice() {
-        let total = 0;
-        let hasPranie = isPranieSelected();
-
-        selectedServices.forEach((service, id) => {
-            if (service.individual) return;
-            let isOdswiezenie = (id === 'wnetrze1');
-            if (isOdswiezenie && hasPranie) return;
-            total += service.price;
-        });
-
-        const totalPriceElement = document.getElementById('totalPrice');
-        if (!totalPriceElement) return;
-
-        const roundedTotal = Math.round(total);
-        const currentPrice = parseInt(totalPriceElement.textContent.replace(/\D/g, '')) || 0;
-
-        if (Math.abs(roundedTotal - currentPrice) < 10) {
-            totalPriceElement.textContent = roundedTotal + ' zł';
+        const priced = checked.filter(id => !SERVICES[id].individual);
+        const hasIndividual = checked.some(id => SERVICES[id].individual);
+        const totalMin = priced.reduce((sum, id) => sum + SERVICES[id].min, 0);
+        const totalMax = priced.reduce((sum, id) => sum + SERVICES[id].max, 0);
+        if (priced.length === 0 && hasIndividual) {
+            totalEl.textContent = "Wycena indywidualna";
+        } else if (hasIndividual) {
+            totalEl.textContent = `od ${totalMin} do ${totalMax} zł + wycena indyw.`;
         } else {
-            animateValue(totalPriceElement, currentPrice, roundedTotal, 500);
+            totalEl.textContent = `od ${totalMin} do ${totalMax} zł`;
         }
     }
 
-    function animateValue(element, start, end, duration) {
-        if (!element) return;
-
-        if (start === end) {
-            element.textContent = end + ' zł';
-            return;
-        }
-
-        const range = end - start;
-        const increment = range / (duration / 16);
-        let current = start;
-
-        const timer = setInterval(() => {
-            current += increment;
-            if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                current = end;
-                clearInterval(timer);
-            }
-            element.textContent = Math.round(current) + ' zł';
-        }, 16);
+    function onCalcChange() {
+        updateDependencies();
+        updateSummary();
+        updatePrice();
     }
 
-    const bookFromCalculatorBtn = document.getElementById('bookFromCalculator');
+    Object.keys(SERVICES).forEach(id => {
+        const cb = document.getElementById(id);
+        if (!cb) return;
 
-    if (bookFromCalculatorBtn) {
-        bookFromCalculatorBtn.addEventListener('click', function (e) {
-            e.preventDefault();
+        const wrapper = cb.closest('.service-checkbox');
+        if (!wrapper) return;
 
-            if (selectedServices.size === 0) {
-                alert('Proszę wybrać przynajmniej jedną usługę w kalkulatorze');
-                return;
-            }
-
-            scrollToBookingWithServices();
+        wrapper.addEventListener('click', function (e) {
+            const lbl = wrapper.querySelector('label');
+            if (lbl && lbl.contains(e.target)) return;
+            if (e.target === cb) return;
+            if (cb.disabled) return;
+            cb.checked = !cb.checked;
+            wrapper.classList.toggle('selected', cb.checked);
+            onCalcChange();
         });
-    }
 
-    const bookingForm = document.getElementById('bookingForm');
-
-    if (bookingForm) {
-        bookingForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn.innerHTML;
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wysyłanie...';
-
-            const formData = new FormData();
-            formData.append('name', document.getElementById('name').value);
-            formData.append('phone', document.getElementById('phone').value);
-            formData.append('email', document.getElementById('email').value);
-            formData.append('vehicle', document.getElementById('vehicle').value);
-            formData.append('service', document.getElementById('service').value);
-            formData.append('date', document.getElementById('date').value);
-            formData.append('message', document.getElementById('message').value);
-
-            fetch('https://formspree.io/f/xvzznzgp', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json'
-                }
-            })
-                .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        return response.json().then(data => { throw new Error(data.error || 'Błąd serwera') });
-                    }
-                })
-                .then(data => {
-                    alert('Dziękujemy! Twoje zapytanie zostało wysłane. Skontaktujemy się z Tobą w ciągu 24 godzin.');
-                    bookingForm.reset();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Wystąpił problem z wysyłką. Upewnij się, że formularz jest aktywowany w Formspree lub zadzwoń: +48 123 456 789');
-                })
-                .finally(() => {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnText;
-                });
+        cb.addEventListener('change', function () {
+            if (this.disabled) return;
+            wrapper.classList.toggle('selected', this.checked);
+            onCalcChange();
         });
-    }
-
+    });
 
     const scrollTopBtn = document.getElementById('scrollTop');
 
@@ -532,11 +234,6 @@
     const modalVehicle = document.getElementById('modalVehicle');
     const modalServices = document.getElementById('modalServices');
     const closeModal = document.querySelector('.gallery-modal-close');
-    const modalBookingBtn = document.querySelector('.modal-booking-btn');
-
-    let currentGalleryTitle = '';
-    let currentGalleryVehicle = '';
-    let currentGalleryServices = '';
 
     galleryItems.forEach(item => {
         item.addEventListener('click', function () {
@@ -544,10 +241,6 @@
             const title = this.getAttribute('data-title');
             const vehicle = this.getAttribute('data-vehicle');
             const services = this.getAttribute('data-services').split(',');
-
-            currentGalleryTitle = title;
-            currentGalleryVehicle = vehicle;
-            currentGalleryServices = services.map(s => s.trim()).join(', ');
 
             modalImage.src = image;
             modalImage.alt = `${title} - ${vehicle}`;
@@ -564,8 +257,10 @@
     });
 
     function closeGalleryModal() {
-        modal.classList.remove('active');
-        document.body.style.overflow = 'auto';
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
     }
 
     if (closeModal) {
@@ -581,36 +276,10 @@
     }
 
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && modal.classList.contains('active')) {
+        if (modal && e.key === 'Escape' && modal.classList.contains('active')) {
             closeGalleryModal();
         }
     });
-
-    if (modalBookingBtn) {
-        modalBookingBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-
-            closeGalleryModal();
-
-            const vehicleField = document.getElementById('vehicle');
-            const messageField = document.getElementById('message');
-
-            if (vehicleField) {
-                vehicleField.value = currentGalleryVehicle;
-            }
-
-            if (messageField) {
-                messageField.value = `Chciałbym umówić wizytę na usługę: ${currentGalleryTitle}\n\nUsługi do wykonania:\n${currentGalleryServices}\n\n`;
-            }
-
-            setTimeout(() => {
-                document.getElementById('booking').scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 300);
-        });
-    }
 
     const forms = document.querySelectorAll('form');
 
@@ -639,10 +308,8 @@
 
     navLinks.forEach(link => {
         link.addEventListener('click', () => {
-            if (window.innerWidth < 992 && navbarCollapse.classList.contains('show')) {
-                const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
-                    toggle: true
-                });
+            if (window.innerWidth < 992 && navbarCollapse && navbarCollapse.classList.contains('show')) {
+                new bootstrap.Collapse(navbarCollapse, { toggle: true });
             }
         });
     });
@@ -675,7 +342,7 @@
                             ${promo.oldPrice ? `<span class="promotion-old-price">${promo.oldPrice} zł</span>` : ''}
                             <span class="promotion-new-price">${promo.newPrice} zł</span>
                         </div>
-                        <a href="#booking" class="promotion-btn">Rezerwuj</a>
+                        <a href="#contact" class="promotion-btn">Kontakt</a>
                     </div>
                 </div>
             </div>
@@ -688,7 +355,6 @@
             document.body.style.transition = 'opacity 0.5s ease';
             document.body.style.opacity = '1';
         }, 100);
-
 
         loadPromotions();
     });
@@ -713,7 +379,6 @@
         });
     });
 
-
     const yearElement = document.querySelector('.footer-bottom p');
     if (yearElement) {
         const currentYear = new Date().getFullYear();
@@ -737,17 +402,6 @@
         lazyImages.forEach(img => imageObserver.observe(img));
     }
 
-    document.addEventListener('keydown', function (e) {
-        if (document.querySelector('.calculator-form')) {
-            if (e.key === 'ArrowRight' && nextStepBtn) {
-                nextStepBtn.click();
-            }
-            if (e.key === 'ArrowLeft' && prevStepBtn) {
-                prevStepBtn.click();
-            }
-        }
-    });
-
     window.addEventListener('beforeprint', function () {
         document.body.classList.add('printing');
     });
@@ -762,5 +416,3 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
     });
 }
-
-
